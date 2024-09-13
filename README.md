@@ -67,5 +67,5 @@ Contributions are welcome! Please follow these steps:
 
 ## Contact
 
-For any questions or feedback, please contact [Your Name](mailto:shafquatk51@gmail.com).
+For any questions or feedback, please contact [Shafquat](mailto:shafquatk51@gmail.com).
 
