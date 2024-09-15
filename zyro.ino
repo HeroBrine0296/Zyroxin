@@ -1,120 +1,119 @@
-// Define pin numbers for ultrasonic sensors
-const int trigPin1 = 2;
-const int echoPin1 = 3;
-const int trigPin2 = 4;
-const int echoPin2 = 5;
-const int trigPin3 = 6;
-const int echoPin3 = 7;
+// Define pins for motors and sensors
+const int motor1Pin1 = 3;  // L298N IN1
+const int motor1Pin2 = 4;  // L298N IN2
+const int motor2Pin1 = 5;  // L298N IN3
+const int motor2Pin2 = 6;  // L298N IN4
+const int trigPin1 = 7;    // Front ultrasonic sensor
+const int echoPin1 = 8;
+const int trigPin2 = 9;    // Left ultrasonic sensor
+const int echoPin2 = 10;
+const int trigPin3 = 11;   // Right ultrasonic sensor
+const int echoPin3 = 12;
 
-// Define pin numbers for motor driver
-const int motor1Pin1 = 8;
-const int motor1Pin2 = 9;
-const int motor2Pin1 = 10;
-const int motor2Pin2 = 11;
-
-// Define constants
-const int maxDistance = 20;  // Maximum distance to consider for obstacle detection (in cm)
-
-// Function prototypes
-long getDistance(int trigPin, int echoPin);
-void moveForward();
-void stop();
-void turnLeft();
-void turnRight();
+// Path tracking variables
+bool pathMarked[4] = {false, false, false, false}; // 0: Forward, 1: Left, 2: Right, 3: Backward
 
 void setup() {
-  // Initialize pins
-  pinMode(trigPin1, OUTPUT);
-  pinMode(echoPin1, INPUT);
-  pinMode(trigPin2, OUTPUT);
-  pinMode(echoPin2, INPUT);
-  pinMode(trigPin3, OUTPUT);
-  pinMode(echoPin3, INPUT);
+pinMode(motor1Pin1, OUTPUT);
+pinMode(motor1Pin2, OUTPUT);
+pinMode(motor2Pin1, OUTPUT);
+pinMode(motor2Pin2, OUTPUT);
+pinMode(trigPin1, OUTPUT);
+pinMode(echoPin1, INPUT);
+pinMode(trigPin2, OUTPUT);
+pinMode(echoPin2, INPUT);
+pinMode(trigPin3, OUTPUT);
+pinMode(echoPin3, INPUT);
 
-  pinMode(motor1Pin1, OUTPUT);
-  pinMode(motor1Pin2, OUTPUT);
-  pinMode(motor2Pin1, OUTPUT);
-  pinMode(motor2Pin2, OUTPUT);
-
-  Serial.begin(9600);
+Serial.begin(9600);
 }
 
 void loop() {
-  long distance1 = getDistance(trigPin1, echoPin1);
-  long distance2 = getDistance(trigPin2, echoPin2);
-  long distance3 = getDistance(trigPin3, echoPin3);
+int distanceFront = getDistance(trigPin1, echoPin1);
+int distanceLeft = getDistance(trigPin2, echoPin2);
+int distanceRight = getDistance(trigPin3, echoPin3);
 
-  Serial.print("Distance1: ");
-  Serial.print(distance1);
-  Serial.print(" cm\t");
-  Serial.print("Distance2: ");
-  Serial.print(distance2);
-  Serial.print(" cm\t");
-  Serial.print("Distance3: ");
-  Serial.print(distance3);
-  Serial.println(" cm");
+updatePathMarkers(distanceFront, distanceLeft, distanceRight);
 
-  if (distance1 < maxDistance) {
-    // Obstacle detected in front
-    if (distance2 < maxDistance) {
-      // Obstacle detected on the left
-      if (distance3 < maxDistance) {
-        // Obstacle detected on the right
-        stop();
-        delay(1000);
-        turnLeft();
-        delay(1000);
-      } else {
-        turnRight();
-        delay(1000);
-      }
-    } else {
-      moveForward();
-    }
-  } else {
-    moveForward();
-  }
+// Decision making based on path markers and distances
+if (!pathMarked[0] && distanceFront > 10) {
+// Move forward if the path ahead is clear and not marked
+moveForward();
+pathMarked[0] = true; // Mark the forward path as taken
+pathMarked[1] = false; // Unmark left and right paths
+pathMarked[2] = false;
+} else if (!pathMarked[1] && distanceLeft > 10) {
+// Turn left if the left path is clear and not marked
+turnLeft();
+pathMarked[1] = true; // Mark the left path as taken
+pathMarked[0] = false; // Unmark forward path
+pathMarked[2] = false;
+} else if (!pathMarked[2] && distanceRight > 10) {
+// Turn right if the right path is clear and not marked
+turnRight();
+pathMarked[2] = true; // Mark the right path as taken
+pathMarked[0] = false; // Unmark forward path
+pathMarked[1] = false;
+} else {
+// Backtrack if all paths are marked or blocked
+moveBackward();
+pathMarked[0] = false; // Unmark the forward path
+pathMarked[1] = false; // Unmark left path
+pathMarked[2] = false; // Unmark right path
 }
 
-long getDistance(int trigPin, int echoPin) {
-  // Trigger the sensor
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
+delay(100); // Short delay to allow for movement and sensor readings
+}
 
-  // Read the echo
-  long duration = pulseIn(echoPin, HIGH);
-  long distance = (duration / 2) / 29.1;  // Convert to cm
+int getDistance(int trigPin, int echoPin) {
+digitalWrite(trigPin, LOW);
+delayMicroseconds(2);
+digitalWrite(trigPin, HIGH);
+delayMicroseconds(10);
+digitalWrite(trigPin, LOW);
 
-  return distance;
+long duration = pulseIn(echoPin, HIGH);
+int distance = duration  0.0344 / 2; // Convert to cm
+
+return distance;
+}
+
+void updatePathMarkers(int distanceFront, int distanceLeft, int distanceRight) {
+const int obstacleThreshold = 10; // cm
+
+// Update path markers based on distance readings
+pathMarked[0] = (distanceFront <= obstacleThreshold);
+
+// Forward
+pathMarked[1] = (distanceLeft <= obstacleThreshold);  // Left
+pathMarked[2] = (distanceRight <= obstacleThreshold); // Right
 }
 
 void moveForward() {
-  digitalWrite(motor1Pin1, HIGH);
-  digitalWrite(motor1Pin2, LOW);
-  digitalWrite(motor2Pin1, HIGH);
-  digitalWrite(motor2Pin2, LOW);
-}
-
-void stop() {
-  digitalWrite(motor1Pin1, LOW);
-  digitalWrite(motor1Pin2, LOW);
-  digitalWrite(motor2Pin1, LOW);
-  digitalWrite(motor2Pin2, LOW);
-}
-
-void turnLeft() {
-  digitalWrite(motor1Pin1, LOW);
-  digitalWrite(motor1Pin2, LOW);
-  digitalWrite(motor2Pin1, HIGH);
-  digitalWrite(motor2Pin2, LOW);
+analogWrite(motor1Pin1, 255); // Full speed
+analogWrite(motor1Pin2, 0);
+analogWrite(motor2Pin1, 255); // Full speed
+analogWrite(motor2Pin2, 0);
 }
 
 void turnRight() {
-  digitalWrite(motor1Pin1, HIGH);
-  digitalWrite(motor1Pin2, LOW);
-  digitalWrite(motor2Pin1, LOW);
-  digitalWrite(motor2Pin2, LOW);
+analogWrite(motor1Pin1, 255); // Full speed
+analogWrite(motor1Pin2, 0);
+analogWrite(motor2Pin1, 0);
+analogWrite(motor2Pin2, 255); // Full speed
 }
+
+void turnLeft() {
+analogWrite(motor1Pin1, 0);
+analogWrite(motor1Pin2, 255); // Full speed
+analogWrite(motor2Pin1, 255); // Full speed
+analogWrite(motor2Pin2, 0);
+}
+
+void moveBackward() {
+analogWrite(motor1Pin1, 0);
+analogWrite(motor1Pin2, 255); // Full speed
+analogWrite(motor2Pin1, 0);
+analogWrite(motor2Pin2, 255); // Full speed
+}
+
