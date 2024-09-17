@@ -1,4 +1,4 @@
-Here's the updated version history with all the breaks included:
+
 # Version Log
 
 ## Zyroxin V1.0 (Humanoid Robot)
